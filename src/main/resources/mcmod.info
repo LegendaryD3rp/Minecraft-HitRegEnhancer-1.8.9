@@ -1,0 +1,13 @@
+[{
+  "modid": "hitenhance",
+  "name": "HitRegEnhancer",
+  "description": "PvP hit registration enhancer: packet priority, CPS buffer, ping/TPS HUD, reach indicator, and more.",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "authorList": ["LegendaryD3rp"],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}]
