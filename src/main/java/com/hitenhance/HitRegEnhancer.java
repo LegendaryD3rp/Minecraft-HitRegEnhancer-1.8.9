@@ -3,8 +3,6 @@ package com.hitenhance;
 import com.hitenhance.config.HitRegConfig;
 import com.hitenhance.handler.*;
 import com.hitenhance.network.KeepAliveOptimizer;
-import com.hitenhance.render.PingTpsHud;
-import com.hitenhance.render.ReachIndicator;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.fml.client.event.ConfigChangedEvent;
@@ -43,13 +41,6 @@ public class HitRegEnhancer {
         // ── 输入优化 ──
         MinecraftForge.EVENT_BUS.register(new CpsBufferHandler());
         MinecraftForge.EVENT_BUS.register(new AirSwingHandler());
-
-        // ── 命中预测 ──
-        MinecraftForge.EVENT_BUS.register(new LocalHitPredictor());
-
-        // ── 渲染 ──
-        MinecraftForge.EVENT_BUS.register(new PingTpsHud());
-        MinecraftForge.EVENT_BUS.register(new ReachIndicator());
 
         logger.info("HitRegEnhancer initialized");
     }

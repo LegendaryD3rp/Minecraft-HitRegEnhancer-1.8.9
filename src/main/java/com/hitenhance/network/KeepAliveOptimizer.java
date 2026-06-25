@@ -1,7 +1,6 @@
 package com.hitenhance.network;
 
 import com.hitenhance.HitRegEnhancer;
-import com.hitenhance.render.PingTpsHud;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -9,7 +8,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.play.server.S00PacketKeepAlive;
 import net.minecraft.network.play.client.C00PacketKeepAlive;
-import net.minecraft.network.play.server.S03PacketTimeUpdate;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.relauncher.Side;
@@ -102,11 +100,6 @@ public class KeepAliveOptimizer {
                                 }
                             }
                             lastKeepAliveReplyTime = now;
-                        }
-
-                        // ── TPS 跟踪 ──
-                        if (msg instanceof S03PacketTimeUpdate) {
-                            PingTpsHud.onTimeUpdatePacket();
                         }
 
                         // 继续传递给 packet_handler

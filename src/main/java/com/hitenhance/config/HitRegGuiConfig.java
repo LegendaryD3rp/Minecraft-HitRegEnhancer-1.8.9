@@ -33,10 +33,7 @@ public class HitRegGuiConfig extends GuiConfig {
             "enabled", "packetPriorityEnabled",
             "cpsBufferEnabled", "cpsBufferMaxPerTick",
             "airSwingEnabled",
-            "keepAliveBoost",
-            "localHitPrediction", "hitPredictRange",
-            "pingTpsHudEnabled", "pingTpsHudX", "pingTpsHudY",
-            "reachIndicatorEnabled", "reachIndicatorRange"
+            "keepAliveBoost"
         };
         for (String key : keys) {
             list.add(new ConfigElement(cfg.getCategory(cat).get(key)));
