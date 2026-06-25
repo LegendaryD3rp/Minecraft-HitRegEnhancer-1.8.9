@@ -66,7 +66,7 @@ public class HitRegGuiConfig extends GuiConfig {
     @Override
     public void onGuiClosed() {
         super.onGuiClosed();
-        HitRegEnhancer.config.config.save();
+        HitRegEnhancer.config.save();
         HitRegEnhancer.config.reload();
     }
 }

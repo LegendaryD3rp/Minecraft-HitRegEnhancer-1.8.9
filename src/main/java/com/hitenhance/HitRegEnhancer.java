@@ -7,10 +7,12 @@ import com.hitenhance.render.PingTpsHud;
 import com.hitenhance.render.ReachIndicator;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.config.Configuration;
+import net.minecraftforge.fml.client.event.ConfigChangedEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import org.apache.logging.log4j.Logger;
 
 @Mod(modid = HitRegEnhancer.MODID, version = HitRegEnhancer.VERSION,
@@ -32,6 +34,9 @@ public class HitRegEnhancer {
 
     @EventHandler
     public void init(FMLInitializationEvent event) {
+        // ── 配置变更监听（GuiConfig 点 Done 后触发） ──
+        MinecraftForge.EVENT_BUS.register(HitRegEnhancer.class);
+
         // ── 网络优化（含包优先级队列） ──
         MinecraftForge.EVENT_BUS.register(new KeepAliveOptimizer());
 
@@ -47,5 +52,17 @@ public class HitRegEnhancer {
         MinecraftForge.EVENT_BUS.register(new ReachIndicator());
 
         logger.info("HitRegEnhancer initialized");
+    }
+
+    /**
+     * GuiConfig 点 Done 后自动触发。
+     * 将 Property 内存值落盘，并重载到字段中。
+     */
+    @SubscribeEvent
+    public static void onConfigChanged(ConfigChangedEvent.OnConfigChangedEvent event) {
+        if (!event.modID.equals(MODID)) return;
+        config.save();
+        config.reload();
+        logger.info("Configuration saved and reloaded");
     }
 }

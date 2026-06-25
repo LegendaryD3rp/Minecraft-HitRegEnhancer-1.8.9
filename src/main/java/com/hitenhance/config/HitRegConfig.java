@@ -92,4 +92,12 @@ public class HitRegConfig {
         readFieldsFromConfig();
         if (config.hasChanged()) config.save();
     }
+
+    /**
+     * 将当前配置写入磁盘。
+     * 在 onConfigChanged 事件中调用。
+     */
+    public void save() {
+        config.save();
+    }
 }
