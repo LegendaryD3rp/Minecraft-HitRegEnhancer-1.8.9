@@ -1,13 +1,14 @@
 [{
   "modid": "hitenhance",
   "name": "HitRegEnhancer",
-  "description": "PvP hit registration enhancer: packet priority, CPS buffer, ping/TPS HUD, reach indicator, and more.",
-  "version": "${version}",
-  "mcversion": "${mcversion}",
-  "url": "",
-  "authorList": ["LegendaryD3rp"],
+  "description": "PvP 延迟优化模组，仅保留四项核心功能，无渲染、无自欺欺人特性。\n\n【包优先级队列】\n在 Netty 管道中将攻击包和 KeepAlive 包插队优先 flush。\n不改包内容、不丢包、不改发包频率，服务器无法检测。\n风险：极低。实测效果甚微，聊胜于无。\n\n【CPS 防丢帧】\n多 tick 积压的攻击包合并补出，防止高 CPS 掉刀。\n\n【对空挥动】\n攻击空中目标时自动补刀，抢连跳和落地前的攻击窗口。\n\n【KeepAlive 即时回复】\n收到 KeepAlive 包直接回，不经过主 tick 循环，降低延迟约 50ms。\n\n作者：LegendaryD3rp",
+  "version": "1.0.0",
+  "mcversion": "1.8.9",
+  "url": "https://github.com/LegendaryD3rp/Minecraft-HitRegEnhancer-1.8.9",
   "credits": "",
+  "authors": ["LegendaryD3rp"],
   "logoFile": "",
   "screenshots": [],
-  "dependencies": []
+  "parent": "",
+  "requiredMods": []
 }]
