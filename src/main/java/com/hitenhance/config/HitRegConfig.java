@@ -1,5 +1,6 @@
 package com.hitenhance.config;
 
+import com.hitenhance.HitRegEnhancer;
 import net.minecraftforge.common.config.Configuration;
 
 /**
@@ -55,8 +56,14 @@ public class HitRegConfig {
      * GUI 保存时用这个（Compass Mod 做法）。
      */
     public void reload() {
+        HitRegEnhancer.logger.info("[HitRegConfig] reload() called");
+        // 读之前先看 Property 当前值
+        HitRegEnhancer.logger.info("[HitRegConfig]  before: enabled=" + config.get("general", "enabled", true).getString()
+            + " cpsBufferEnabled=" + config.get("general", "cpsBufferEnabled", true).getString());
         readFields();
+        HitRegEnhancer.logger.info("[HitRegConfig]  after readFields: enabled=" + enabled + " cpsBufferEnabled=" + cpsBufferEnabled);
         config.save();
+        HitRegEnhancer.logger.info("[HitRegConfig] config.save() done, file=" + config.toString());
     }
 
     // ================================================================
