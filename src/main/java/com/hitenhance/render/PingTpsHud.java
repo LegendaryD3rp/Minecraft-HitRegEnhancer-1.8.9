@@ -72,10 +72,7 @@ public class PingTpsHud {
         ScaledResolution sr = new ScaledResolution(mc);
         FontRenderer fr = mc.fontRendererObj;
 
-        int x = HitRegEnhancer.config.pingTpsHudX;
-        int y = HitRegEnhancer.config.pingTpsHudY;
-
-        // Ping
+        // Ping & TPS 文字
         long ping = KeepAliveOptimizer.getCurrentPing();
 
         String pingColor = "§a";
@@ -91,8 +88,13 @@ public class PingTpsHud {
 
         String tpsStr = tpsColor + String.format("TPS: %.1f", smoothedTps);
 
+        // ── 右上角对齐 ──
+        int rightMargin = HitRegEnhancer.config.pingTpsHudX;
+        int y           = HitRegEnhancer.config.pingTpsHudY;
+
         // Background
         int textWidth = Math.max(fr.getStringWidth(pingStr), fr.getStringWidth(tpsStr));
+        int x = sr.getScaledWidth() - textWidth - rightMargin - 2;
         int bgColor = 0x66000000;
 
         Gui.drawRect(x - 2, y - 2, x + textWidth + 2, y + fr.FONT_HEIGHT * 2 + 2, bgColor);

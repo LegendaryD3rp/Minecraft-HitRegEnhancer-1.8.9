@@ -25,13 +25,13 @@ public class HitRegConfig {
     public boolean keepAliveBoost = true;
 
     // ── 本地命中预测 ──
-    public boolean localHitPrediction = true;
+    public boolean localHitPrediction = false;
     public double hitPredictRange = 4.5;
 
     // ── Ping/TPS HUD ──
     public boolean pingTpsHudEnabled = true;
-    public int pingTpsHudX = 2;
-    public int pingTpsHudY = 2;
+    public int pingTpsHudX = 4;   // 右边缘间距
+    public int pingTpsHudY = 4;   // 顶部间距
 
     // ── 攻击范围指示器 ──
     public boolean reachIndicatorEnabled = true;
@@ -80,11 +80,11 @@ public class HitRegConfig {
         cpsBufferMaxPerTick  = config.getInt   ("cpsBufferMaxPerTick",   cat, 1, 0, 5,"每 tick 补刀数");
         airSwingEnabled      = config.getBoolean("airSwingEnabled",       cat, true,  "对空挥动");
         keepAliveBoost       = config.getBoolean("keepAliveBoost",        cat, true,  "KeepAlive 加速");
-        localHitPrediction   = config.getBoolean("localHitPrediction",    cat, true,  "本地命中预测");
+        localHitPrediction   = config.getBoolean("localHitPrediction",    cat, false, "本地命中预测（自欺欺人模式）");
         hitPredictRange      = config.getFloat  ("hitPredictRange",      cat, 4.5F, 1, 6, "预测范围");
         pingTpsHudEnabled    = config.getBoolean("pingTpsHudEnabled",     cat, true,  "Ping/TPS HUD");
-        pingTpsHudX          = config.getInt    ("pingTpsHudX",           cat, 2, 0, 1920, "HUD X");
-        pingTpsHudY          = config.getInt    ("pingTpsHudY",           cat, 2, 0, 1080, "HUD Y");
+        pingTpsHudX          = config.getInt    ("pingTpsHudX",           cat, 4, 0, 1920, "距右边缘的间距");
+        pingTpsHudY          = config.getInt    ("pingTpsHudY",           cat, 4, 0, 1080, "距顶部边缘的间距");
         reachIndicatorEnabled= config.getBoolean("reachIndicatorEnabled", cat, true,  "范围指示器");
         reachIndicatorRange  = config.getFloat  ("reachIndicatorRange",   cat, 4.5F, 1, 6, "指示器范围");
     }
