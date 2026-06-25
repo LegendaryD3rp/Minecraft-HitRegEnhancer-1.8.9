@@ -34,8 +34,8 @@ public class HitRegEnhancer {
 
     @EventHandler
     public void init(FMLInitializationEvent event) {
-        // ── 配置变更监听（GuiConfig 点 Done 后触发） ──
-        MinecraftForge.EVENT_BUS.register(HitRegEnhancer.class);
+        // ── 配置变更监听（跟 Compass Mod 一样用实例 handler） ──
+        MinecraftForge.EVENT_BUS.register(new ConfigChangeHandler());
 
         // ── 网络优化（含包优先级队列） ──
         MinecraftForge.EVENT_BUS.register(new KeepAliveOptimizer());
@@ -54,14 +54,13 @@ public class HitRegEnhancer {
         logger.info("HitRegEnhancer initialized");
     }
 
-    /**
-     * GuiConfig 点 Done 后自动触发。
-     * 将 Property 内存值落盘，并重载到字段中。
-     */
-    @SubscribeEvent
-    public static void onConfigChanged(ConfigChangedEvent.OnConfigChangedEvent event) {
-        if (!event.modID.equals(MODID)) return;
-        config.reload();
-        logger.info("Configuration saved and reloaded");
+    // ── 配置变更监听器（独立实例，Forge 1.8.9 只能用 register(Object)） ──
+    public static class ConfigChangeHandler {
+        @SubscribeEvent
+        public void onConfigChanged(ConfigChangedEvent.OnConfigChangedEvent event) {
+            if (!event.modID.equals(MODID)) return;
+            config.reload();
+            logger.info("Configuration saved and reloaded");
+        }
     }
 }
