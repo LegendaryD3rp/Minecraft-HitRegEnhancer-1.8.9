@@ -37,9 +37,7 @@ public class HitRegConfig {
 
     public HitRegConfig(Configuration config) {
         this.config = config;
-        config.load();
-        readFieldsFromConfig();
-        if (config.hasChanged()) config.save();
+        loadFromDisk();
     }
 
     private void readFieldsFromConfig() {
@@ -84,20 +82,21 @@ public class HitRegConfig {
     }
 
     /**
-     * 从磁盘重载配置，使 GUI 修改实时生效。
-     * 在 GuiConfig.onGuiClosed() 中调用。
+     * 从 Config 的 Property 内存值重载到 Java 字段，然后写盘。
+     * 不调 config.load()，否则会从旧文件读取，覆盖 GUI 已更新的内存值。
+     * 构造时先用 loadFromDisk()，GUI 保存时用 reload()。
      */
     public void reload() {
-        config.load();
         readFieldsFromConfig();
-        if (config.hasChanged()) config.save();
+        config.save();
     }
 
     /**
-     * 将当前配置写入磁盘。
-     * 在 onConfigChanged 事件中调用。
+     * 首次初始化：从磁盘读入 Properties，再读到 Java 字段。
      */
-    public void save() {
-        config.save();
+    public void loadFromDisk() {
+        config.load();
+        readFieldsFromConfig();
+        if (config.hasChanged()) config.save();
     }
 }

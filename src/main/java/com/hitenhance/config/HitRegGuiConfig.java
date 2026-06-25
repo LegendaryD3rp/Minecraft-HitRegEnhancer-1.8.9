@@ -59,14 +59,13 @@ public class HitRegGuiConfig extends GuiConfig {
     }
 
     /**
-     * GUI 关闭时先保存配置到磁盘，再重载到内存字段。
-     * GuiConfig.saveConfigElements() 只更新 Property 内存值，
-     * 不写文件，必须手动调 config.save()。
+     * GUI 关闭时重载配置。
+     * reload() 从 Property 内存值（已由 GUI 更新）读到 Java 字段，
+     * 然后写盘持久化。
      */
     @Override
     public void onGuiClosed() {
         super.onGuiClosed();
-        HitRegEnhancer.config.save();
         HitRegEnhancer.config.reload();
     }
 }

@@ -61,7 +61,6 @@ public class HitRegEnhancer {
     @SubscribeEvent
     public static void onConfigChanged(ConfigChangedEvent.OnConfigChangedEvent event) {
         if (!event.modID.equals(MODID)) return;
-        config.save();
         config.reload();
         logger.info("Configuration saved and reloaded");
     }
