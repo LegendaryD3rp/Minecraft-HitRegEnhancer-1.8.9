@@ -2,9 +2,8 @@ package com.hitenhance.config;
 
 import com.hitenhance.HitRegEnhancer;
 import net.minecraft.client.gui.GuiScreen;
-import net.minecraftforge.common.config.ConfigCategory;
 import net.minecraftforge.common.config.ConfigElement;
-import net.minecraftforge.fml.client.config.DummyConfigElement;
+import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.fml.client.config.GuiConfig;
 import net.minecraftforge.fml.client.config.IConfigElement;
 
@@ -12,57 +11,40 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Mod 配置 GUI 页面。
- * 可从 Mods 列表 → HitRegEnhancer → Config 进入。
- * 保存后实时更新 {@link HitRegConfig} 中的字段值。
+ * 配置 GUI — 跟 Compass Mod 一样的用法。
+ * 所有元素平铺，不嵌套子菜单。
  */
 public class HitRegGuiConfig extends GuiConfig {
 
     public HitRegGuiConfig(GuiScreen parent) {
-        super(parent, buildConfigElements(),
+        super(parent, getConfigElements(),
               HitRegEnhancer.MODID, false, false,
               "HitRegEnhancer — PvP 延迟优化");
     }
 
-    private static List<IConfigElement> buildConfigElements() {
+    private static List<IConfigElement> getConfigElements() {
         List<IConfigElement> list = new ArrayList<>();
+        Configuration cfg = HitRegEnhancer.config.config;
+        String cat = Configuration.CATEGORY_GENERAL;
 
-        // ── General（展开显示，不加子菜单）──
-        list.addAll(new ConfigElement(
-                HitRegEnhancer.config.config.getCategory("general"))
-                .getChildElements());
-
-        // ── 子模块（折叠式）──
-        addSubMenu(list, "cps_buffer",      "CPS 防丢帧");
-        addSubMenu(list, "air_swing",       "对空挥动");
-        addSubMenu(list, "keepalive",       "KeepAlive 优化");
-        addSubMenu(list, "hit_predict",     "命中预测");
-        addSubMenu(list, "hud",             "Ping/TPS HUD");
-        addSubMenu(list, "reach_indicator", "攻击范围指示器");
+        // 从 Configuration 里取每个 Property 包成 ConfigElement
+        // 这些 Property 和 readFields() 里用的是同一批对象
+        String[] keys = {
+            "enabled", "packetPriorityEnabled",
+            "cpsBufferEnabled", "cpsBufferMaxPerTick",
+            "airSwingEnabled",
+            "keepAliveBoost",
+            "localHitPrediction", "hitPredictRange",
+            "pingTpsHudEnabled", "pingTpsHudX", "pingTpsHudY",
+            "reachIndicatorEnabled", "reachIndicatorRange"
+        };
+        for (String key : keys) {
+            list.add(new ConfigElement(cfg.getCategory(cat).get(key)));
+        }
 
         return list;
     }
 
-    /**
-     * 将一个配置类别包装为可折叠的子菜单。
-     * 空类别不显示（如 attack_packet 已被删除）。
-     */
-    private static void addSubMenu(List<IConfigElement> list,
-                                   String catName, String displayName) {
-        ConfigCategory cat = HitRegEnhancer.config.config.getCategory(catName);
-        if (cat.isEmpty()) return;
-
-        list.add(new DummyConfigElement.DummyCategoryElement(
-                displayName,
-                "hitenhance.config." + catName,
-                new ConfigElement(cat).getChildElements()));
-    }
-
-    /**
-     * GUI 关闭时重载配置。
-     * reload() 从 Property 内存值（已由 GUI 更新）读到 Java 字段，
-     * 然后写盘持久化。
-     */
     @Override
     public void onGuiClosed() {
         super.onGuiClosed();
