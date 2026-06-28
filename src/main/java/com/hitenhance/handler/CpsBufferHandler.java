@@ -11,7 +11,7 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 import org.lwjgl.input.Mouse;
 
 /**
- * CPS 防丢帧。
+ * CPS 防丢帧 + 滑动窗口限流。
  *
  * 当 GC/渲染卡顿导致 tick 被跳过时，鼠标「按下-释放」可能被吞掉。
  * 本 handler 检测左键上升沿（按下瞬间），如果该次点击未被正常处理，
@@ -23,8 +23,9 @@ import org.lwjgl.input.Mouse;
  *
  * 安全防护：
  *   1. 最小补偿间隔 100ms（防连发）
- *   2. 到达距离校验（防穿墙）
- *   3. 鼠标释放后清空缓冲（不残存）
+ *   2. 滑动窗口 20 C02/s 限流（防短时 cps 冲高被反作弊标记）
+ *   3. 到达距离校验（防穿墙）
+ *   4. 鼠标释放后清空缓冲（不残存）
  */
 @SideOnly(Side.CLIENT)
 public class CpsBufferHandler {
@@ -34,9 +35,30 @@ public class CpsBufferHandler {
     private boolean wasLeftDown = false;
     private int skippedClicks = 0;
 
-    // 限频：至少间隔 100ms，防止补偿连发被反作弊判定为 badpacket
+    // 补偿限频：至少间隔 100ms，防止补偿连发被反作弊判定为 badpacket
     private long lastCompensationTime = 0;
     private static final long COMPENSATION_INTERVAL_MS = 100L;
+
+    // ── 滑动窗口限流：任何 1000ms 窗口内最多 20 次 C02 ──
+    // 循环数组，记录最近 20 次 C02 的发送时间戳
+    private final long[] c02Timestamps = new long[20];
+    private int c02Index = 0;
+
+    /**
+     * 检查并记录一次 C02 发送。
+     * @return true = 允许发送，false = 已到上限，不发
+     */
+    private boolean canSendC02() {
+        long now = System.currentTimeMillis();
+        int slot = c02Index % 20;
+        // 如果最旧的记录还在 1000ms 以内 → 窗口满了，限流
+        if (c02Timestamps[slot] > 0 && now - c02Timestamps[slot] < 1000) {
+            return false;
+        }
+        c02Timestamps[slot] = now;
+        c02Index++;
+        return true;
+    }
 
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
@@ -65,9 +87,17 @@ public class CpsBufferHandler {
         // ── 补偿执行 ──
         if (skippedClicks > 0 && mc.currentScreen == null) {
 
-            // 限频
+            // 限频 1：补偿间隔 100ms
             long now = System.currentTimeMillis();
             if (now - lastCompensationTime < COMPENSATION_INTERVAL_MS) {
+                wasLeftDown = leftDown;
+                return;
+            }
+
+            // 限频 2：滑动窗口 20 C02/s（保护反作弊侧）
+            if (!canSendC02()) {
+                // 达到 20cps 上限，跳过本次补偿
+                // skippedClicks 保留，下次 tick 再试
                 wasLeftDown = leftDown;
                 return;
             }

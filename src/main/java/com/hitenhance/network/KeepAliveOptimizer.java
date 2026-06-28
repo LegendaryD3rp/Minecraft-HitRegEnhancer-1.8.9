@@ -15,14 +15,18 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.concurrent.TimeUnit;
 
 /**
- * KeepAlive 即时回复。
+ * KeepAlive 回复加速 + 随机抖动伪装。
  *
  * 在 Netty pipeline 中注入 handler，在 packet_handler 之前
- * 拦截 S00PacketKeepAlive，立即回复 C00PacketKeepAlive。
+ * 拦截 S00PacketKeepAlive，在同一事件循环线程中延迟
+ * 30-100ms 随机后再回复 C00PacketKeepAlive。
  *
- * 这样 KeepAlive 回复不经过主线程 tick 循环，延迟降低 ~50ms。
+ * 这样 KeepAlive 回复不经过主线程 tick 循环（原版路径减少 ~50ms），
+ * 同时 30-100ms 随机抖动模拟真实网络延迟，
+ * 防止反作弊因 RTT < 5ms 识别出 KeepAlive 加速。
  */
 @SideOnly(Side.CLIENT)
 public class KeepAliveOptimizer {
@@ -30,9 +34,8 @@ public class KeepAliveOptimizer {
     private static final Minecraft mc = Minecraft.getMinecraft();
 
     // 用于计算 Ping 的 RTT 信息
-    private static long lastKeepAliveReplyTime = 0;
     private static long lastKeepAliveReceiveTime = 0;
-    private static long lastRtt = 0;  // 最后一次 RTT
+    private static volatile long lastRtt = 0;  // 最后一次 RTT（volatile：event loop 写+主线程读）
 
     /** 获取当前 Ping（ms），0 表示未知 */
     public static long getCurrentPing() {
@@ -78,28 +81,41 @@ public class KeepAliveOptimizer {
                 new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                        // ── KeepAlive 即时回复 ──
+                        // ── KeepAlive 伪装回复（带随机抖动）──
                         if (msg instanceof S00PacketKeepAlive) {
                             S00PacketKeepAlive pkt = (S00PacketKeepAlive) msg;
 
-                            long now = System.currentTimeMillis();
-                            lastKeepAliveReceiveTime = now;
+                            final long s00ReceiveTime = System.currentTimeMillis();
+                            lastKeepAliveReceiveTime = s00ReceiveTime;
 
-                            // 立即回复
                             // 用反射获取 KeepAlive ID（兼容不同 MCP 映射）
-                            int id = getKeepAliveId(pkt);
-                            ctx.channel().writeAndFlush(new C00PacketKeepAlive(id));
+                            final int id = getKeepAliveId(pkt);
 
-                            // RTT 估算
-                            if (lastKeepAliveReplyTime > 0) {
-                                long estimatedRtt = now - lastKeepAliveReplyTime;
+                            // ★ 随机抖动 30-100ms，模拟真实网络延迟
+                            // 反作弊识别 KeepAlive 加速的手段就是看 RTT 是否 < 10ms
+                            // 30-100ms 的随机抖动会落在正常玩家的 ping 范围内，
+                            // 且每次抖动值不同，不会被统计为固定延迟特征。
+                            final long jitter = 30 + (long)(Math.random() * 70);
+
+                            // 在 Netty 事件循环线程内调度回复，不阻塞主线程
+                            ctx.executor().schedule(() -> {
+                                // 断线保护：player 在 jitter 时间内断开，丢弃回复
+                                if (!ctx.channel().isActive()) return;
+
+                                // ctx.writeAndFlush() 从 ka_booster 往 head 方向走，
+                                // 直接进 encoder，绕过 priority_queue，真正做到即时回复。
+                                ctx.writeAndFlush(new C00PacketKeepAlive(id));
+
+                                // RTT 估算 = S00 收到 → C00 发出的实际耗时
+                                // 这近似等于我们故意加的抖动延迟，
+                                // 对 Ping 显示和反作弊来说都自然合理。
+                                long rtt = System.currentTimeMillis() - s00ReceiveTime;
                                 if (lastRtt == 0) {
-                                    lastRtt = estimatedRtt;
+                                    lastRtt = rtt;
                                 } else {
-                                    lastRtt = (lastRtt * 3 + estimatedRtt) / 4;
+                                    lastRtt = (lastRtt * 3 + rtt) / 4;
                                 }
-                            }
-                            lastKeepAliveReplyTime = now;
+                            }, jitter, TimeUnit.MILLISECONDS);
 
                             // ★ 消费该包，不传给 packet_handler
                             // vanilla NetHandlerPlayClient.handleKeepAlive()

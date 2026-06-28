@@ -40,6 +40,7 @@ public class PacketPriorityHandler extends ChannelOutboundHandlerAdapter {
 
     private static boolean isHighPriority(Packet<?> pkt) {
         return pkt instanceof C02PacketUseEntity           // 攻击 / 交互实体
+            || pkt instanceof C0APacketAnimation           // 挥动包（MCP 名 C0APacketAnimation，非 C0APacketSwing）
             || pkt instanceof C03PacketPlayer              // 位置 / 旋转（所有变体）
             || pkt instanceof C08PacketPlayerBlockPlacement // 右键放置 / 使用物品
             || pkt instanceof C09PacketHeldItemChange       // 切换快捷栏
