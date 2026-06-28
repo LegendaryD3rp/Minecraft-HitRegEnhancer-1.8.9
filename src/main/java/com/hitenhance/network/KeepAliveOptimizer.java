@@ -15,18 +15,28 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.concurrent.TimeUnit;
 
 /**
- * KeepAlive 回复加速 + 随机抖动伪装。
+ * KeepAlive 回复修正（防双重 C00 + 绕过优先级队列）。
  *
- * 在 Netty pipeline 中注入 handler，在 packet_handler 之前
- * 拦截 S00PacketKeepAlive，在同一事件循环线程中延迟
- * 30-100ms 随机后再回复 C00PacketKeepAlive。
+ * 在 Netty pipeline 中注入 ka_booster handler，在 packet_handler 之前
+ * 拦截 S00PacketKeepAlive，消费该包并即刻在同一事件循环线程上
+ * 回复 C00PacketKeepAlive。
  *
- * 这样 KeepAlive 回复不经过主线程 tick 循环（原版路径减少 ~50ms），
- * 同时 30-100ms 随机抖动模拟真实网络延迟，
- * 防止反作弊因 RTT < 5ms 识别出 KeepAlive 加速。
+ * 核心问题：
+ *   PacketPriorityHandler 开启时，C00PacketKeepAlive 从 pipeline tail 出发
+ *   会被 priority_queue 拦截，因其不在 HIGH 列表而被当作 MEDIUM 延迟到 tick 末，
+ *   额外增加 ~50ms 延迟。
+ *
+ * 本 handler 的 ctx.writeAndFlush() 从 ka_booster 的位置向 head 方向写，
+ *   绕过 priority_queue，C00 即刻编码发出，等价于原版 event loop 上的处理速度。
+ *
+ * 同时消费 S00，防止 S00 传到 packet_handler 触发的 vanilla handleKeepAlive()
+ * 再发一次 C00，导致 server 收到双重回复触发 badpacket 检测。
+ *
+ * 注意：原版 1.8.9 的 NetHandlerPlayClient.handleKeepAlive() 也在 event loop
+ * 上直接处理，延迟约 1ms。本 handler 与之相同。
+ * 「加速」表像的实质是为 priority_queue 擦屁股，恢复 vanilla 的即时性。
  */
 @SideOnly(Side.CLIENT)
 public class KeepAliveOptimizer {
@@ -34,7 +44,6 @@ public class KeepAliveOptimizer {
     private static final Minecraft mc = Minecraft.getMinecraft();
 
     // 用于计算 Ping 的 RTT 信息
-    private static long lastKeepAliveReceiveTime = 0;
     private static volatile long lastRtt = 0;  // 最后一次 RTT（volatile：event loop 写+主线程读）
 
     /** 获取当前 Ping（ms），0 表示未知 */
@@ -81,47 +90,23 @@ public class KeepAliveOptimizer {
                 new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                        // ── KeepAlive 伪装回复（带随机抖动）──
+                        // ── KeepAlive 即时回复（防双重 C00 + 绕过 priority_queue）──
                         if (msg instanceof S00PacketKeepAlive) {
                             S00PacketKeepAlive pkt = (S00PacketKeepAlive) msg;
-
-                            final long s00ReceiveTime = System.currentTimeMillis();
-                            lastKeepAliveReceiveTime = s00ReceiveTime;
 
                             // 用反射获取 KeepAlive ID（兼容不同 MCP 映射）
                             final int id = getKeepAliveId(pkt);
 
-                            // ★ 随机抖动 30-100ms，模拟真实网络延迟
-                            // 反作弊识别 KeepAlive 加速的手段就是看 RTT 是否 < 10ms
-                            // 30-100ms 的随机抖动会落在正常玩家的 ping 范围内，
-                            // 且每次抖动值不同，不会被统计为固定延迟特征。
-                            final long jitter = 30 + (long)(Math.random() * 70);
-
-                            // 在 Netty 事件循环线程内调度回复，不阻塞主线程
-                            ctx.executor().schedule(() -> {
-                                // 断线保护：player 在 jitter 时间内断开，丢弃回复
-                                if (!ctx.channel().isActive()) return;
-
-                                // ctx.writeAndFlush() 从 ka_booster 往 head 方向走，
-                                // 直接进 encoder，绕过 priority_queue，真正做到即时回复。
+                            // 断线保护：channel 未激活时不发 C00
+                            if (ctx.channel().isActive()) {
+                                // ctx.writeAndFlush() 从 ka_booster 向 head 方向走，
+                                // 直接进 encoder，绕过 priority_queue，与原版 event loop 处理速度相同。
                                 ctx.writeAndFlush(new C00PacketKeepAlive(id));
-
-                                // RTT 估算 = S00 收到 → C00 发出的实际耗时
-                                // 这近似等于我们故意加的抖动延迟，
-                                // 对 Ping 显示和反作弊来说都自然合理。
-                                long rtt = System.currentTimeMillis() - s00ReceiveTime;
-                                if (lastRtt == 0) {
-                                    lastRtt = rtt;
-                                } else {
-                                    lastRtt = (lastRtt * 3 + rtt) / 4;
-                                }
-                            }, jitter, TimeUnit.MILLISECONDS);
+                            }
 
                             // ★ 消费该包，不传给 packet_handler
-                            // vanilla NetHandlerPlayClient.handleKeepAlive()
-                            // 在 1.8.9 中只做一件事件：sendPacket(new C00PacketKeepAlive(id))
-                            // 我们在上面已经发了，再传给 vanilla 会导致双重 C00 回复，
-                            // 触发反作弊 badpacket/keepalive sequence 检测。
+                            // 原版 NetHandlerPlayClient.handleKeepAlive() 也会调 sendPacket(C00)，
+                            // S00 传过去会导致双重 C00 回复 → 反作弊 badpacket。
                             return;
                         }
 
