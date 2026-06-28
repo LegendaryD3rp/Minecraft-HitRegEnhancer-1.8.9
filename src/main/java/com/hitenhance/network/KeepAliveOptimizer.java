@@ -100,9 +100,16 @@ public class KeepAliveOptimizer {
                                 }
                             }
                             lastKeepAliveReplyTime = now;
+
+                            // ★ 消费该包，不传给 packet_handler
+                            // vanilla NetHandlerPlayClient.handleKeepAlive()
+                            // 在 1.8.9 中只做一件事件：sendPacket(new C00PacketKeepAlive(id))
+                            // 我们在上面已经发了，再传给 vanilla 会导致双重 C00 回复，
+                            // 触发反作弊 badpacket/keepalive sequence 检测。
+                            return;
                         }
 
-                        // 继续传递给 packet_handler
+                        // 非 KeepAlive 包：正常继续传递
                         ctx.fireChannelRead(msg);
                     }
                 });
