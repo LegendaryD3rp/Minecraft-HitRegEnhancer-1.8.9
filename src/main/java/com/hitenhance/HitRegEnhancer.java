@@ -2,6 +2,7 @@ package com.hitenhance;
 
 import com.hitenhance.config.HitRegConfig;
 import com.hitenhance.handler.*;
+import com.hitenhance.network.HttpCacheHandler;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.fml.client.event.ConfigChangedEvent;
@@ -18,7 +19,7 @@ import org.apache.logging.log4j.Logger;
 public class HitRegEnhancer {
 
     public static final String MODID = "hitenhance";
-    public static final String VERSION = "1.0.0";
+    public static final String VERSION = "1.1.0";
 
     public static Logger logger;
     public static HitRegConfig config;
@@ -27,6 +28,11 @@ public class HitRegEnhancer {
     public void preInit(FMLPreInitializationEvent event) {
         logger = event.getModLog();
         config = new HitRegConfig(new Configuration(event.getSuggestedConfigurationFile()));
+
+        // ── HTTP 缓存系统（全局只装一次） ──
+        if (config.skinCacheEnabled) {
+            HttpCacheHandler.install();
+        }
     }
 
     @EventHandler
@@ -38,7 +44,10 @@ public class HitRegEnhancer {
         MinecraftForge.EVENT_BUS.register(new LeftClickBypassHandler());
         MinecraftForge.EVENT_BUS.register(new CpsBufferHandler());
 
-        logger.info("HitRegEnhancer initialized");
+        // ── 网络节流 ──
+        MinecraftForge.EVENT_BUS.register(new NetworkThrottler());
+
+        logger.info("HitRegEnhancer initialized (v" + VERSION + ")");
     }
 
     // ── 配置变更监听器 ──

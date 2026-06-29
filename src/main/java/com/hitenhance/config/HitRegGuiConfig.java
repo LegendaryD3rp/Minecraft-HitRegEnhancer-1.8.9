@@ -29,7 +29,10 @@ public class HitRegGuiConfig extends GuiConfig {
         String[] keys = {
             "enabled",
             "leftClickBypassEnabled",
-            "cpsBufferEnabled"
+            "cpsBufferEnabled",
+            "skinCacheEnabled",
+            "pingThrottleEnabled",
+            "statusThrottleEnabled"
         };
         for (String key : keys) {
             list.add(new ConfigElement(cfg.getCategory(cat).get(key)));
