@@ -2,7 +2,6 @@ package com.hitenhance;
 
 import com.hitenhance.config.HitRegConfig;
 import com.hitenhance.handler.*;
-import com.hitenhance.network.KeepAliveOptimizer;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.fml.client.event.ConfigChangedEvent;
@@ -32,20 +31,17 @@ public class HitRegEnhancer {
 
     @EventHandler
     public void init(FMLInitializationEvent event) {
-        // ── 配置变更监听（跟 Compass Mod 一样用实例 handler） ──
+        // ── 配置变更监听 ──
         MinecraftForge.EVENT_BUS.register(new ConfigChangeHandler());
 
-        // ── 网络优化（含包优先级队列） ──
-        MinecraftForge.EVENT_BUS.register(new KeepAliveOptimizer());
-
         // ── 输入优化 ──
+        MinecraftForge.EVENT_BUS.register(new LeftClickBypassHandler());
         MinecraftForge.EVENT_BUS.register(new CpsBufferHandler());
-        MinecraftForge.EVENT_BUS.register(new AirSwingHandler());
 
         logger.info("HitRegEnhancer initialized");
     }
 
-    // ── 配置变更监听器（独立实例，Forge 1.8.9 只能用 register(Object)） ──
+    // ── 配置变更监听器 ──
     public static class ConfigChangeHandler {
         @SubscribeEvent
         public void onConfigChanged(ConfigChangedEvent.OnConfigChangedEvent event) {
